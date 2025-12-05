@@ -37,6 +37,10 @@ class MainActivity : AppCompatActivity() {
             val intent = Intent(this, SettingsActivity::class.java)
             startActivity(intent)
         }
+        findViewById<Button>(R.id.btnLock).setOnClickListener {
+            val intent = Intent(this, LockActivity::class.java)
+            startActivity(intent)
+        }
     }
 
     private fun checkOverlayPermission(): Boolean {

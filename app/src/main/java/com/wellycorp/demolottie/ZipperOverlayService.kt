@@ -4,17 +4,20 @@ import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.util.DisplayMetrics
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
+import android.view.WindowMetrics
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.ImageView
 import androidx.core.app.NotificationCompat
@@ -74,32 +77,6 @@ class ZipperOverlayService : Service() {
     private fun setupOverlay() {
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         overlayView = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null)
-
-        val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        } else {
-            @Suppress("DEPRECATION")
-            WindowManager.LayoutParams.TYPE_PHONE
-        }
-
-        val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
-            layoutType,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            PixelFormat.TRANSLUCENT
-        )
-
-        params.gravity = Gravity.TOP or Gravity.START
-        params.x = 0
-        params.y = 0
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-        }
-
         // Setup zipper views
         setupZipperViews()
     }
@@ -321,14 +298,16 @@ class ZipperOverlayService : Service() {
                     WindowManager.LayoutParams.TYPE_PHONE
                 }
 
+                val flag = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                        WindowManager.LayoutParams.FLAG_FULLSCREEN
+
                 val params = WindowManager.LayoutParams(
                     WindowManager.LayoutParams.MATCH_PARENT,
-                    WindowManager.LayoutParams.MATCH_PARENT,
+                    WindowManager.LayoutParams.WRAP_CONTENT,
                     layoutType,
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                            WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                    1832/*flag*/,
                     PixelFormat.TRANSLUCENT
                 )
 
@@ -342,7 +321,10 @@ class ZipperOverlayService : Service() {
                 
                 // Remove any padding from overlay view
                 overlayView?.setPadding(0, 0, 0, 0)
-                
+                getPhysicalScreenSize(this).let { (w, h) ->
+                    params.width = w
+                    params.height = h
+                }
                 windowManager?.addView(overlayView, params)
                 
                 // Reset views to initial position AFTER they're added to window
@@ -356,6 +338,27 @@ class ZipperOverlayService : Service() {
             Log.e(TAG, "Error showing overlay", e)
             e.printStackTrace()
         }
+    }
+
+    fun getPhysicalScreenSize(context: Context?): Pair<Int, Int> {
+        var w = 0
+        var h = 0
+        context?.let {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val metrics: WindowMetrics =
+                    context.getSystemService(WindowManager::class.java).currentWindowMetrics
+                w = metrics.bounds.right - metrics.bounds.left
+                h = metrics.bounds.bottom - metrics.bounds.top
+            } else {
+                val windowManager =
+                    context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                val metrics = DisplayMetrics()
+                windowManager.defaultDisplay.getRealMetrics(metrics)
+                w = metrics.widthPixels
+                h = metrics.heightPixels
+            }
+        }
+        return Pair(w, h)
     }
     
     private fun resetViewsToInitialPosition() {
