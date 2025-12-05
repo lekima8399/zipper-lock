@@ -36,56 +36,55 @@ class PatternLockView @JvmOverloads constructor(
     attrs: AttributeSet? = null
 ) : View(context, attrs) {
 
-    private var mDotStates: Array<Array<DotState>>
-    private var mPatternSize: Int
-    private var mDrawingProfilingStarted = false
-    private var mAnimatingPeriodStart: Long = 0
-    private var mHitFactor = 0.6f
-
-    private var mAspectRatioEnabled: Boolean
+    private var dotStates: Array<Array<DotState>>
+    private var patternSize: Int
+    private var drawingProfilingStarted = false
+    private var animatingPeriodStart: Long = 0
+    private var hitFactor = 0.6f
+    private var aspectRatioEnabled: Boolean
     @AspectRatio
-    private var mAspectRatio: Int
-    private var mNormalStateColor: Int
-    private var mWrongStateColor: Int
-    private var mCorrectStateColor: Int
-    private var mPathWidth: Int
-    private var mDotNormalSize: Int
-    private var mDotSelectedSize: Int
-    private var mDotAnimationDuration: Int
-    private var mPathEndAnimationDuration: Int
+    private var aspectRatio: Int
+    private var normalStateColor: Int
+    private var wrongStateColor: Int
+    private var correctStateColor: Int
+    private var pathWidth: Int
+    private var dotNormalSize: Int
+    private var dotSelectedSize: Int
+    private var dotAnimationDuration: Int
+    private var pathEndAnimationDuration: Int
 
-    private val mDotPaint = Paint()
-    private val mPathPaint = Paint()
+    private val dotPaint = Paint()
+    private val pathPaint = Paint()
 
-    private val mPatternListeners: MutableList<PatternLockViewListener> = ArrayList()
-    private var mPattern: ArrayList<Dot>
+    private val patternListeners: MutableList<PatternLockViewListener> = ArrayList()
+    private var pattern: ArrayList<Dot>
 
-    private var mPatternDrawLookup: Array<BooleanArray>
+    private var patternDrawLookup: Array<BooleanArray>
 
-    private var mInProgressX = -1f
-    private var mInProgressY = -1f
+    private var inProgressX = -1f
+    private var inProgressY = -1f
 
     @PatternViewMode
-    private var mPatternViewMode: Int = PatternViewMode.AUTO_DRAW
-    private var mInputEnabled = true
-    private var mInStealthMode = false
-    private var mEnableHapticFeedback = true
-    private var mPatternInProgress = false
+    private var patternViewMode: Int = PatternViewMode.AUTO_DRAW
+    private var inputEnabled = true
+    private var inStealthMode = false
+    private var enableHapticFeedback = true
+    private var patternInProgress = false
 
-    private var mViewWidth = 0f
-    private var mViewHeight = 0f
+    private var viewWidth = 0f
+    private var viewHeight = 0f
 
-    private val mCurrentPath = Path()
-    private val mInvalidate = Rect()
-    private val mTempInvalidateRect = Rect()
+    private val currentPath = Path()
+    private val invalidate = Rect()
+    private val tempInvalidateRect = Rect()
 
-    private var mFastOutSlowInInterpolator: Interpolator = LinearInterpolator()
-    private var mLinearOutSlowInInterpolator: Interpolator = LinearInterpolator()
+    private var fastOutSlowInInterpolator: Interpolator = LinearInterpolator()
+    private var linearOutSlowInInterpolator: Interpolator = LinearInterpolator()
 
-    private var sDotCount: Int = 0
-    private val sDots: Array<Array<Dot>> by lazy {
-        Array(sDotCount) { row ->
-            Array(sDotCount) { col ->
+    private var dotCount: Int = 0
+    private val dots: Array<Array<Dot>> by lazy {
+        Array(dotCount) { row ->
+            Array(dotCount) { col ->
                 Dot(row, col)
             }
         }
@@ -93,50 +92,49 @@ class PatternLockView @JvmOverloads constructor(
 
 
     init {
-        val typedArray: TypedArray =
-            context.obtainStyledAttributes(attrs, R.styleable.PatternLockView)
+        val typedArray: TypedArray = context.obtainStyledAttributes(attrs, R.styleable.PatternLockView)
         try {
-            sDotCount = typedArray.getInt(
+            dotCount = typedArray.getInt(
                 R.styleable.PatternLockView_dotCount,
                 DEFAULT_PATTERN_DOT_COUNT
             )
-            mAspectRatioEnabled = typedArray.getBoolean(
+            aspectRatioEnabled = typedArray.getBoolean(
                 R.styleable.PatternLockView_aspectRatioEnabled,
                 false
             )
-            mAspectRatio = typedArray.getInt(
+            aspectRatio = typedArray.getInt(
                 R.styleable.PatternLockView_aspectRatio,
                 AspectRatio.ASPECT_RATIO_SQUARE
             )
-            mPathWidth = typedArray.getDimension(
+            pathWidth = typedArray.getDimension(
                 R.styleable.PatternLockView_pathWidth,
                 context.resources.getDimension(R.dimen.pattern_lock_path_width)
             ).toInt()
-            mNormalStateColor = typedArray.getColor(
+            normalStateColor = typedArray.getColor(
                 R.styleable.PatternLockView_normalStateColor,
                 ContextCompat.getColor(context, R.color.white)
             )
-            mCorrectStateColor = typedArray.getColor(
+            correctStateColor = typedArray.getColor(
                 R.styleable.PatternLockView_correctStateColor,
                 ContextCompat.getColor(context, R.color.white)
             )
-            mWrongStateColor = typedArray.getColor(
+            wrongStateColor = typedArray.getColor(
                 R.styleable.PatternLockView_wrongStateColor,
                 ContextCompat.getColor(context, R.color.pomegranate)
             )
-            mDotNormalSize = typedArray.getDimension(
+            dotNormalSize = typedArray.getDimension(
                 R.styleable.PatternLockView_dotNormalSize,
                 context.resources.getDimension(R.dimen.pattern_lock_dot_size)
             ).toInt()
-            mDotSelectedSize = typedArray.getDimension(
+            dotSelectedSize = typedArray.getDimension(
                 R.styleable.PatternLockView_dotSelectedSize,
                 context.resources.getDimension(R.dimen.pattern_lock_dot_selected_size)
             ).toInt()
-            mDotAnimationDuration = typedArray.getInt(
+            dotAnimationDuration = typedArray.getInt(
                 R.styleable.PatternLockView_dotAnimationDuration,
                 DEFAULT_DOT_ANIMATION_DURATION
             )
-            mPathEndAnimationDuration = typedArray.getInt(
+            pathEndAnimationDuration = typedArray.getInt(
                 R.styleable.PatternLockView_pathEndAnimationDuration,
                 DEFAULT_PATH_END_ANIMATION_DURATION
             )
@@ -144,14 +142,14 @@ class PatternLockView @JvmOverloads constructor(
             typedArray.recycle()
         }
 
-        mPatternSize = sDotCount * sDotCount
-        mPattern = ArrayList(mPatternSize)
-        mPatternDrawLookup = Array(sDotCount) { BooleanArray(sDotCount) }
+        patternSize = dotCount * dotCount
+        pattern = ArrayList(patternSize)
+        patternDrawLookup = Array(dotCount) { BooleanArray(dotCount) }
 
-        mDotStates = Array(sDotCount) { row ->
-            Array(sDotCount) { col ->
+        dotStates = Array(dotCount) { row ->
+            Array(dotCount) { col ->
                 DotState().apply {
-                    mSize = mDotNormalSize.toFloat()
+                    size = dotNormalSize.toFloat()
                 }
             }
         }
@@ -162,26 +160,26 @@ class PatternLockView @JvmOverloads constructor(
     private fun initView() {
         isClickable = true
 
-        mPathPaint.apply {
+        pathPaint.apply {
             isAntiAlias = true
             isDither = true
-            color = mNormalStateColor
+            color = normalStateColor
             style = Paint.Style.STROKE
             strokeJoin = Paint.Join.ROUND
             strokeCap = Paint.Cap.ROUND
-            strokeWidth = mPathWidth.toFloat()
+            strokeWidth = pathWidth.toFloat()
         }
 
-        mDotPaint.apply {
+        dotPaint.apply {
             isAntiAlias = true
             isDither = true
         }
 
         if (!isInEditMode) {
-            mFastOutSlowInInterpolator = AnimationUtils.loadInterpolator(
+            fastOutSlowInInterpolator = AnimationUtils.loadInterpolator(
                 context, android.R.interpolator.fast_out_slow_in
             )
-            mLinearOutSlowInInterpolator = AnimationUtils.loadInterpolator(
+            linearOutSlowInInterpolator = AnimationUtils.loadInterpolator(
                 context, android.R.interpolator.linear_out_slow_in
             )
         }
@@ -190,12 +188,12 @@ class PatternLockView @JvmOverloads constructor(
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
 
-        if (!mAspectRatioEnabled) return
+        if (!aspectRatioEnabled) return
 
         val oldWidth = resolveMeasured(widthMeasureSpec, suggestedMinimumWidth)
         val oldHeight = resolveMeasured(heightMeasureSpec, suggestedMinimumHeight)
 
-        val (newWidth, newHeight) = when (mAspectRatio) {
+        val (newWidth, newHeight) = when (aspectRatio) {
             AspectRatio.ASPECT_RATIO_SQUARE -> {
                 val size = minOf(oldWidth, oldHeight)
                 size to size
@@ -216,14 +214,14 @@ class PatternLockView @JvmOverloads constructor(
     }
 
     override fun onDraw(canvas: Canvas) {
-        val pattern = mPattern
+        val pattern = this.pattern
         val patternSize = pattern.size
-        val drawLookupTable = mPatternDrawLookup
+        val drawLookupTable = this.patternDrawLookup
 
-        if (mPatternViewMode == PatternViewMode.AUTO_DRAW) {
+        if (this.patternViewMode == PatternViewMode.AUTO_DRAW) {
             val oneCycle = (patternSize + 1) * MILLIS_PER_CIRCLE_ANIMATING
             val spotInCycle =
-                ((SystemClock.elapsedRealtime() - mAnimatingPeriodStart) % oneCycle).toInt()
+                ((SystemClock.elapsedRealtime() - this.animatingPeriodStart) % oneCycle).toInt()
             val numCircles = spotInCycle / MILLIS_PER_CIRCLE_ANIMATING
             clearPatternDrawLookup()
             for (i in 0 until numCircles) {
@@ -247,37 +245,37 @@ class PatternLockView @JvmOverloads constructor(
                         (getCenterXForColumn(nextDot.column) - centerX)
                 val dy = percentageOfNextCircle *
                         (getCenterYForRow(nextDot.row) - centerY)
-                mInProgressX = centerX + dx
-                mInProgressY = centerY + dy
+                this.inProgressX = centerX + dx
+                this.inProgressY = centerY + dy
             }
             invalidate()
         }
 
-        val currentPath = mCurrentPath
+        val currentPath = this.currentPath
         currentPath.rewind()
 
         // Draw dots
-        for (i in 0 until sDotCount) {
+        for (i in 0 until this.dotCount) {
             val centerY = getCenterYForRow(i)
-            for (j in 0 until sDotCount) {
-                val dotState = mDotStates[i][j]
+            for (j in 0 until this.dotCount) {
+                val dotState = this.dotStates[i][j]
                 val centerX = getCenterXForColumn(j)
-                val size = dotState.mSize * dotState.mScale
-                val translationY = dotState.mTranslateY
+                val size = dotState.size * dotState.scale
+                val translationY = dotState.translateY
                 drawCircle(
                     canvas,
                     centerX.toInt().toFloat(),
                     centerY + translationY,
                     size,
                     drawLookupTable[i][j],
-                    dotState.mAlpha
+                    dotState.alpha
                 )
             }
         }
 
-        val drawPath = !mInStealthMode
+        val drawPath = !this.inStealthMode
         if (drawPath) {
-            mPathPaint.color = getCurrentColor(true)
+            this.pathPaint.color = getCurrentColor(true)
 
             var anyCircles = false
             var lastX = 0f
@@ -292,46 +290,46 @@ class PatternLockView @JvmOverloads constructor(
                 val centerX = getCenterXForColumn(dot.column)
                 val centerY = getCenterYForRow(dot.row)
                 if (i != 0) {
-                    val state = mDotStates[dot.row][dot.column]
+                    val state = this.dotStates[dot.row][dot.column]
                     currentPath.rewind()
                     currentPath.moveTo(lastX, lastY)
-                    if (state.mLineEndX != Float.MIN_VALUE &&
-                        state.mLineEndY != Float.MIN_VALUE
+                    if (state.lineEndX != Float.MIN_VALUE &&
+                        state.lineEndY != Float.MIN_VALUE
                     ) {
-                        currentPath.lineTo(state.mLineEndX, state.mLineEndY)
+                        currentPath.lineTo(state.lineEndX, state.lineEndY)
                     } else {
                         currentPath.lineTo(centerX, centerY)
                     }
-                    canvas.drawPath(currentPath, mPathPaint)
+                    canvas.drawPath(currentPath, this.pathPaint)
                 }
                 lastX = centerX
                 lastY = centerY
             }
 
-            if ((mPatternInProgress || mPatternViewMode == PatternViewMode.AUTO_DRAW) && anyCircles) {
+            if ((this.patternInProgress || this.patternViewMode == PatternViewMode.AUTO_DRAW) && anyCircles) {
                 currentPath.rewind()
                 currentPath.moveTo(lastX, lastY)
-                currentPath.lineTo(mInProgressX, mInProgressY)
+                currentPath.lineTo(this.inProgressX, this.inProgressY)
 
-                mPathPaint.alpha = (calculateLastSegmentAlpha(
-                    mInProgressX,
-                    mInProgressY,
+                this.pathPaint.alpha = (calculateLastSegmentAlpha(
+                    this.inProgressX,
+                    this.inProgressY,
                     lastX,
                     lastY
                 ) * 255f).toInt()
-                canvas.drawPath(currentPath, mPathPaint)
+                canvas.drawPath(currentPath, this.pathPaint)
             }
         }
     }
 
-    fun getDotCount(): Int = sDotCount
+    fun getDotCount(): Int = this.dotCount
 
     override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
         val adjustedWidth = width - paddingLeft - paddingRight
-        mViewWidth = adjustedWidth / sDotCount.toFloat()
+        this.viewWidth = adjustedWidth / this.dotCount.toFloat()
 
         val adjustedHeight = height - paddingTop - paddingBottom
-        mViewHeight = adjustedHeight / sDotCount.toFloat()
+        this.viewHeight = adjustedHeight / this.dotCount.toFloat()
     }
 
     override fun onHoverEvent(event: MotionEvent): Boolean {
@@ -351,7 +349,7 @@ class PatternLockView @JvmOverloads constructor(
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (!mInputEnabled || !isEnabled) return false
+        if (!this.inputEnabled || !isEnabled) return false
 
         return when (event.action) {
             MotionEvent.ACTION_DOWN -> {
@@ -370,13 +368,13 @@ class PatternLockView @JvmOverloads constructor(
             }
 
             MotionEvent.ACTION_CANCEL -> {
-                mPatternInProgress = false
+                this.patternInProgress = false
                 resetPattern()
                 notifyPatternCleared()
 
-                if (PROFILE_DRAWING && mDrawingProfilingStarted) {
+                if (PROFILE_DRAWING && this.drawingProfilingStarted) {
                     Debug.stopMethodTracing()
-                    mDrawingProfilingStarted = false
+                    this.drawingProfilingStarted = false
                 }
                 true
             }
@@ -386,23 +384,23 @@ class PatternLockView @JvmOverloads constructor(
     }
 
     fun setPattern(@PatternViewMode patternViewMode: Int, pattern: List<Dot>) {
-        mPattern.clear()
-        mPattern.addAll(pattern)
+        this.pattern.clear()
+        this.pattern.addAll(pattern)
         clearPatternDrawLookup()
         for (dot in pattern) {
-            mPatternDrawLookup[dot.row][dot.column] = true
+            this.patternDrawLookup[dot.row][dot.column] = true
         }
         setViewMode(patternViewMode)
     }
 
     fun setViewMode(@PatternViewMode patternViewMode: Int) {
-        mPatternViewMode = patternViewMode
+        this@PatternLockView.patternViewMode = patternViewMode
         if (patternViewMode == PatternViewMode.AUTO_DRAW) {
-            if (mPattern.isNotEmpty()) {
-                mAnimatingPeriodStart = SystemClock.elapsedRealtime()
-                val first = mPattern[0]
-                mInProgressX = getCenterXForColumn(first.column)
-                mInProgressY = getCenterYForRow(first.row)
+            if (this.pattern.isNotEmpty()) {
+                this.animatingPeriodStart = SystemClock.elapsedRealtime()
+                val first = pattern[0]
+                this.inProgressX = getCenterXForColumn(first.column)
+                this.inProgressY = getCenterYForRow(first.row)
                 clearPatternDrawLookup()
             }
             invalidate()
@@ -410,15 +408,15 @@ class PatternLockView @JvmOverloads constructor(
     }
 
     fun setDotCount(dotCount: Int) {
-        sDotCount = dotCount
-        mPatternSize = sDotCount * sDotCount
-        mPattern = ArrayList(mPatternSize)
-        mPatternDrawLookup = Array(sDotCount) { BooleanArray(sDotCount) }
+        this@PatternLockView.dotCount = dotCount
+        this.patternSize = this@PatternLockView.dotCount * this@PatternLockView.dotCount
+        this.pattern = ArrayList(patternSize)
+        this.patternDrawLookup = Array(this@PatternLockView.dotCount) { BooleanArray(this@PatternLockView.dotCount) }
 
-        mDotStates = Array(sDotCount) {
-            Array(sDotCount) {
+        this.dotStates = Array(this@PatternLockView.dotCount) {
+            Array(this@PatternLockView.dotCount) {
                 DotState().apply {
-                    mSize = mDotNormalSize.toFloat()
+                    size = this@PatternLockView.dotNormalSize.toFloat()
                 }
             }
         }
@@ -428,28 +426,28 @@ class PatternLockView @JvmOverloads constructor(
     }
 
     fun setAspectRatioEnabled(aspectRatioEnabled: Boolean) {
-        mAspectRatioEnabled = aspectRatioEnabled
+        this@PatternLockView.aspectRatioEnabled = aspectRatioEnabled
         requestLayout()
     }
 
     fun setAspectRatio(@AspectRatio aspectRatio: Int) {
-        mAspectRatio = aspectRatio
+        this@PatternLockView.aspectRatio = aspectRatio
         requestLayout()
     }
 
     fun setPathWidth(@Dimension pathWidth: Int) {
-        mPathWidth = pathWidth
+        this@PatternLockView.pathWidth = pathWidth
         initView()
         invalidate()
     }
 
     fun setDotNormalSize(@Dimension dotNormalSize: Int) {
-        mDotNormalSize = dotNormalSize
+        this@PatternLockView.dotNormalSize = dotNormalSize
 
-        for (i in 0 until sDotCount) {
-            for (j in 0 until sDotCount) {
-                mDotStates[i][j] = DotState().apply {
-                    mSize = mDotNormalSize.toFloat()
+        for (i in 0 until this@PatternLockView.dotCount) {
+            for (j in 0 until this@PatternLockView.dotCount) {
+                this@PatternLockView.dotStates[i][j] = DotState().apply {
+                    size = dotNormalSize.toFloat()
                 }
             }
         }
@@ -458,7 +456,7 @@ class PatternLockView @JvmOverloads constructor(
     }
 
     fun setDotAnimationDuration(dotAnimationDuration: Int) {
-        mDotAnimationDuration = dotAnimationDuration
+        this@PatternLockView.dotAnimationDuration = dotAnimationDuration
         invalidate()
     }
 
@@ -478,7 +476,7 @@ class PatternLockView @JvmOverloads constructor(
 
     private fun notifyPatternProgress() {
         sendAccessEvent(R.string.message_pattern_dot_added)
-        notifyListenersProgress(mPattern)
+        notifyListenersProgress(this@PatternLockView.pattern)
     }
 
     private fun notifyPatternStarted() {
@@ -488,7 +486,7 @@ class PatternLockView @JvmOverloads constructor(
 
     private fun notifyPatternDetected() {
         sendAccessEvent(R.string.message_pattern_detected)
-        notifyListenersComplete(mPattern)
+        notifyListenersComplete(this@PatternLockView.pattern)
     }
 
     private fun notifyPatternCleared() {
@@ -497,32 +495,32 @@ class PatternLockView @JvmOverloads constructor(
     }
 
     private fun resetPattern() {
-        mPattern.clear()
+        this@PatternLockView.pattern.clear()
         clearPatternDrawLookup()
-        mPatternViewMode = PatternViewMode.CORRECT
+        this@PatternLockView.patternViewMode = PatternViewMode.CORRECT
         invalidate()
     }
 
     private fun notifyListenersStarted() {
-        mPatternListeners.forEach { it.onStarted() }
+        this@PatternLockView.patternListeners.forEach { it.onStarted() }
     }
 
     private fun notifyListenersProgress(pattern: List<Dot>) {
-        mPatternListeners.forEach { it.onProgress(pattern) }
+        this@PatternLockView.patternListeners.forEach { it.onProgress(pattern) }
     }
 
     private fun notifyListenersComplete(pattern: List<Dot>) {
-        mPatternListeners.forEach { it.onComplete(pattern) }
+        this@PatternLockView.patternListeners.forEach { it.onComplete(pattern) }
     }
 
     private fun notifyListenersCleared() {
-        mPatternListeners.forEach { it.onCleared() }
+        this@PatternLockView.patternListeners.forEach { it.onCleared() }
     }
 
     private fun clearPatternDrawLookup() {
-        for (i in 0 until sDotCount) {
-            for (j in 0 until sDotCount) {
-                mPatternDrawLookup[i][j] = false
+        for (i in 0 until this@PatternLockView.dotCount) {
+            for (j in 0 until this@PatternLockView.dotCount) {
+                this@PatternLockView.patternDrawLookup[i][j] = false
             }
         }
     }
@@ -531,8 +529,8 @@ class PatternLockView @JvmOverloads constructor(
         val dot = checkForNewHit(x, y) ?: return null
 
         var fillInGapDot: Dot? = null
-        if (mPattern.isNotEmpty()) {
-            val lastDot = mPattern[mPattern.size - 1]
+        if (this@PatternLockView.pattern.isNotEmpty()) {
+            val lastDot = this@PatternLockView.pattern[pattern.size - 1]
             val dRow = dot.row - lastDot.row
             val dColumn = dot.column - lastDot.column
 
@@ -551,14 +549,14 @@ class PatternLockView @JvmOverloads constructor(
         }
 
         if (fillInGapDot != null &&
-            !mPatternDrawLookup[fillInGapDot.row][fillInGapDot.column]
+            !this@PatternLockView.patternDrawLookup[fillInGapDot.row][fillInGapDot.column]
         ) {
             addCellToPattern(fillInGapDot)
         }
 
         addCellToPattern(dot)
 
-        if (mEnableHapticFeedback) {
+        if (this@PatternLockView.enableHapticFeedback) {
             performHapticFeedback(
                 HapticFeedbackConstants.VIRTUAL_KEY,
                 HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING or
@@ -569,36 +567,36 @@ class PatternLockView @JvmOverloads constructor(
     }
 
     private fun addCellToPattern(newDot: Dot) {
-        mPatternDrawLookup[newDot.row][newDot.column] = true
-        mPattern.add(newDot)
-        if (!mInStealthMode) {
+        this@PatternLockView.patternDrawLookup[newDot.row][newDot.column] = true
+        this@PatternLockView.pattern.add(newDot)
+        if (!this@PatternLockView.inStealthMode) {
             startDotSelectedAnimation(newDot)
         }
         notifyPatternProgress()
     }
 
     private fun startDotSelectedAnimation(dot: Dot) {
-        val dotState = mDotStates[dot.row][dot.column]
+        val dotState = this@PatternLockView.dotStates[dot.row][dot.column]
         startSizeAnimation(
-            mDotNormalSize.toFloat(),
-            mDotSelectedSize.toFloat(),
-            mDotAnimationDuration.toLong(),
-            mLinearOutSlowInInterpolator,
+            this@PatternLockView.dotNormalSize.toFloat(),
+            this@PatternLockView.dotSelectedSize.toFloat(),
+            this@PatternLockView.dotAnimationDuration.toLong(),
+            this@PatternLockView.linearOutSlowInInterpolator,
             dotState
         ) {
             startSizeAnimation(
-                mDotSelectedSize.toFloat(),
-                mDotNormalSize.toFloat(),
-                mDotAnimationDuration.toLong(),
-                mFastOutSlowInInterpolator,
+                this@PatternLockView.dotSelectedSize.toFloat(),
+                this@PatternLockView.dotNormalSize.toFloat(),
+                this@PatternLockView.dotAnimationDuration.toLong(),
+                this@PatternLockView.fastOutSlowInInterpolator,
                 dotState,
                 null
             )
         }
         startLineEndAnimation(
             dotState,
-            mInProgressX,
-            mInProgressY,
+            this@PatternLockView.inProgressX,
+            this@PatternLockView.inProgressY,
             getCenterXForColumn(dot.column),
             getCenterYForRow(dot.row)
         )
@@ -614,19 +612,19 @@ class PatternLockView @JvmOverloads constructor(
         val valueAnimator = ValueAnimator.ofFloat(0f, 1f)
         valueAnimator.addUpdateListener { animation ->
             val t = animation.animatedValue as Float
-            state.mLineEndX = (1 - t) * startX + t * targetX
-            state.mLineEndY = (1 - t) * startY + t * targetY
+            state.lineEndX = (1 - t) * startX + t * targetX
+            state.lineEndY = (1 - t) * startY + t * targetY
             invalidate()
         }
         valueAnimator.addListener(object : AnimatorListenerAdapter() {
             override fun onAnimationEnd(animation: Animator) {
-                state.mLineAnimator = null
+                state.lineAnimator = null
             }
         })
-        valueAnimator.interpolator = mFastOutSlowInInterpolator
-        valueAnimator.duration = mPathEndAnimationDuration.toLong()
+        valueAnimator.interpolator = this@PatternLockView.fastOutSlowInInterpolator
+        valueAnimator.duration = this@PatternLockView.pathEndAnimationDuration.toLong()
         valueAnimator.start()
-        state.mLineAnimator = valueAnimator
+        state.lineAnimator = valueAnimator
     }
 
     private fun startSizeAnimation(
@@ -639,7 +637,7 @@ class PatternLockView @JvmOverloads constructor(
     ) {
         val valueAnimator = ValueAnimator.ofFloat(start, end)
         valueAnimator.addUpdateListener { animation ->
-            state.mSize = animation.animatedValue as Float
+            state.size = animation.animatedValue as Float
             invalidate()
         }
         if (endRunnable != null) {
@@ -662,17 +660,17 @@ class PatternLockView @JvmOverloads constructor(
         val columnHit = getColumnHit(x)
         if (columnHit < 0) return null
 
-        if (mPatternDrawLookup[rowHit][columnHit]) return null
+        if (this@PatternLockView.patternDrawLookup[rowHit][columnHit]) return null
 
         return dotOf(rowHit, columnHit)
     }
 
     private fun getRowHit(y: Float): Int {
-        val squareHeight = mViewHeight
-        val hitSize = squareHeight * mHitFactor
+        val squareHeight = this@PatternLockView.viewHeight
+        val hitSize = squareHeight * this@PatternLockView.hitFactor
 
         val offset = paddingTop + (squareHeight - hitSize) / 2f
-        for (i in 0 until sDotCount) {
+        for (i in 0 until this@PatternLockView.dotCount) {
             val hitTop = offset + squareHeight * i
             if (y >= hitTop && y <= hitTop + hitSize) {
                 return i
@@ -682,11 +680,11 @@ class PatternLockView @JvmOverloads constructor(
     }
 
     private fun getColumnHit(x: Float): Int {
-        val squareWidth = mViewWidth
-        val hitSize = squareWidth * mHitFactor
+        val squareWidth = this@PatternLockView.viewWidth
+        val hitSize = squareWidth * this@PatternLockView.hitFactor
 
         val offset = paddingLeft + (squareWidth - hitSize) / 2f
-        for (i in 0 until sDotCount) {
+        for (i in 0 until this@PatternLockView.dotCount) {
             val hitLeft = offset + squareWidth * i
             if (x >= hitLeft && x <= hitLeft + hitSize) {
                 return i
@@ -696,9 +694,9 @@ class PatternLockView @JvmOverloads constructor(
     }
 
     private fun handleActionMove(event: MotionEvent) {
-        val radius = mPathWidth.toFloat()
+        val radius = this@PatternLockView.pathWidth.toFloat()
         val historySize = event.historySize
-        mTempInvalidateRect.setEmpty()
+        this@PatternLockView.tempInvalidateRect.setEmpty()
         var invalidateNow = false
 
         for (i in 0..historySize) {
@@ -706,20 +704,20 @@ class PatternLockView @JvmOverloads constructor(
             val y = if (i < historySize) event.getHistoricalY(i) else event.y
 
             val hitDot = detectAndAddHit(x, y)
-            val patternSize = mPattern.size
+            val patternSize = pattern.size
             if (hitDot != null && patternSize == 1) {
-                mPatternInProgress = true
+                this@PatternLockView.patternInProgress = true
                 notifyPatternStarted()
             }
 
-            val dx = abs(x - mInProgressX)
-            val dy = abs(y - mInProgressY)
+            val dx = abs(x - this@PatternLockView.inProgressX)
+            val dy = abs(y - this@PatternLockView.inProgressY)
             if (dx > DEFAULT_DRAG_THRESHOLD || dy > DEFAULT_DRAG_THRESHOLD) {
                 invalidateNow = true
             }
 
-            if (mPatternInProgress && patternSize > 0) {
-                val pattern = mPattern
+            if (this@PatternLockView.patternInProgress && patternSize > 0) {
+                val pattern = this@PatternLockView.pattern
                 val lastDot = pattern[patternSize - 1]
                 val lastCellCenterX = getCenterXForColumn(lastDot.column)
                 val lastCellCenterY = getCenterYForRow(lastDot.row)
@@ -730,8 +728,8 @@ class PatternLockView @JvmOverloads constructor(
                 var bottom = max(lastCellCenterY, y) + radius
 
                 if (hitDot != null) {
-                    val width = mViewWidth * 0.5f
-                    val height = mViewHeight * 0.5f
+                    val width = this@PatternLockView.viewWidth * 0.5f
+                    val height = this@PatternLockView.viewHeight * 0.5f
                     val hitCellCenterX = getCenterXForColumn(hitDot.column)
                     val hitCellCenterY = getCenterYForRow(hitDot.row)
 
@@ -741,7 +739,7 @@ class PatternLockView @JvmOverloads constructor(
                     bottom = max(hitCellCenterY + height, bottom)
                 }
 
-                mTempInvalidateRect.union(
+                this@PatternLockView.tempInvalidateRect.union(
                     left.toInt(),
                     top.toInt(),
                     right.toInt(),
@@ -750,13 +748,13 @@ class PatternLockView @JvmOverloads constructor(
             }
         }
 
-        mInProgressX = event.x
-        mInProgressY = event.y
+        this@PatternLockView.inProgressX = event.x
+        this@PatternLockView.inProgressY = event.y
 
         if (invalidateNow) {
-            mInvalidate.union(mTempInvalidateRect)
-            invalidate(mInvalidate)
-            mInvalidate.set(mTempInvalidateRect)
+            this@PatternLockView.invalidate.union(this@PatternLockView.tempInvalidateRect)
+            invalidate(this@PatternLockView.invalidate)
+            this@PatternLockView.invalidate.set(this@PatternLockView.tempInvalidateRect)
         }
     }
 
@@ -765,26 +763,26 @@ class PatternLockView @JvmOverloads constructor(
     }
 
     private fun handleActionUp(event: MotionEvent) {
-        if (mPattern.isNotEmpty()) {
-            mPatternInProgress = false
+        if (this@PatternLockView.pattern.isNotEmpty()) {
+            this@PatternLockView.patternInProgress = false
             cancelLineAnimations()
             notifyPatternDetected()
             invalidate()
         }
-        if (PROFILE_DRAWING && mDrawingProfilingStarted) {
+        if (PROFILE_DRAWING && this@PatternLockView.drawingProfilingStarted) {
             Debug.stopMethodTracing()
-            mDrawingProfilingStarted = false
+            this@PatternLockView.drawingProfilingStarted = false
         }
     }
 
     private fun cancelLineAnimations() {
-        for (i in 0 until sDotCount) {
-            for (j in 0 until sDotCount) {
-                val state = mDotStates[i][j]
-                state.mLineAnimator?.let {
+        for (i in 0 until this@PatternLockView.dotCount) {
+            for (j in 0 until this@PatternLockView.dotCount) {
+                val state = this@PatternLockView.dotStates[i][j]
+                state.lineAnimator?.let {
                     it.cancel()
-                    state.mLineEndX = Float.MIN_VALUE
-                    state.mLineEndY = Float.MIN_VALUE
+                    state.lineEndX = Float.MIN_VALUE
+                    state.lineEndY = Float.MIN_VALUE
                 }
             }
         }
@@ -796,19 +794,19 @@ class PatternLockView @JvmOverloads constructor(
         val y = event.y
         val hitDot = detectAndAddHit(x, y)
         if (hitDot != null) {
-            mPatternInProgress = true
-            mPatternViewMode = PatternViewMode.CORRECT
+            this@PatternLockView.patternInProgress = true
+            this@PatternLockView.patternViewMode = PatternViewMode.CORRECT
             notifyPatternStarted()
         } else {
-            mPatternInProgress = false
+            this@PatternLockView.patternInProgress = false
             notifyPatternCleared()
         }
         if (hitDot != null) {
             val startX = getCenterXForColumn(hitDot.column)
             val startY = getCenterYForRow(hitDot.row)
 
-            val widthOffset = mViewWidth / 2f
-            val heightOffset = mViewHeight / 2f
+            val widthOffset = this@PatternLockView.viewWidth / 2f
+            val heightOffset = this@PatternLockView.viewHeight / 2f
 
             invalidate(
                 (startX - widthOffset).toInt(),
@@ -817,19 +815,19 @@ class PatternLockView @JvmOverloads constructor(
                 (startY + heightOffset).toInt()
             )
         }
-        mInProgressX = x
-        mInProgressY = y
-        if (PROFILE_DRAWING && !mDrawingProfilingStarted) {
+        this@PatternLockView.inProgressX = x
+        this@PatternLockView.inProgressY = y
+        if (PROFILE_DRAWING && !this@PatternLockView.drawingProfilingStarted) {
             Debug.startMethodTracing("PatternLockDrawing")
-            mDrawingProfilingStarted = true
+            this@PatternLockView.drawingProfilingStarted = true
         }
     }
 
     private fun getCenterXForColumn(column: Int): Float =
-        paddingLeft + column * mViewWidth + mViewWidth / 2f
+        paddingLeft + column * this@PatternLockView.viewWidth + this@PatternLockView.viewWidth / 2f
 
     private fun getCenterYForRow(row: Int): Float =
-        paddingTop + row * mViewHeight + mViewHeight / 2f
+        paddingTop + row * this@PatternLockView.viewHeight + this@PatternLockView.viewHeight / 2f
 
     private fun calculateLastSegmentAlpha(
         x: Float,
@@ -840,21 +838,21 @@ class PatternLockView @JvmOverloads constructor(
         val diffX = x - lastX
         val diffY = y - lastY
         val dist = sqrt(diffX * diffX + diffY * diffY)
-        val fraction = dist / mViewWidth
+        val fraction = dist / this@PatternLockView.viewWidth
         return min(1f, max(0f, (fraction - 0.3f) * 4f))
     }
 
     private fun getCurrentColor(partOfPattern: Boolean): Int {
-        return if (!partOfPattern || mInStealthMode || mPatternInProgress) {
-            mNormalStateColor
-        } else if (mPatternViewMode == PatternViewMode.WRONG) {
-            mWrongStateColor
-        } else if (mPatternViewMode == PatternViewMode.CORRECT ||
-            mPatternViewMode == PatternViewMode.AUTO_DRAW
+        return if (!partOfPattern || this@PatternLockView.inStealthMode || this@PatternLockView.patternInProgress) {
+            this@PatternLockView.normalStateColor
+        } else if (this@PatternLockView.patternViewMode == PatternViewMode.WRONG) {
+            this@PatternLockView.wrongStateColor
+        } else if (this@PatternLockView.patternViewMode == PatternViewMode.CORRECT ||
+            this@PatternLockView.patternViewMode == PatternViewMode.AUTO_DRAW
         ) {
-            mCorrectStateColor
+            this@PatternLockView.correctStateColor
         } else {
-            throw IllegalStateException("Unknown view mode $mPatternViewMode")
+            throw IllegalStateException("Unknown view mode $patternViewMode")
         }
     }
 
@@ -866,32 +864,93 @@ class PatternLockView @JvmOverloads constructor(
         partOfPattern: Boolean,
         alpha: Float
     ) {
-        mDotPaint.color = getCurrentColor(partOfPattern)
-        mDotPaint.alpha = (alpha * 255).toInt()
-        canvas.drawCircle(centerX, centerY, size / 2f, mDotPaint)
+        this@PatternLockView.dotPaint.color = getCurrentColor(partOfPattern)
+        this@PatternLockView.dotPaint.alpha = (alpha * 255).toInt()
+        canvas.drawCircle(centerX, centerY, size / 2f, dotPaint)
     }
 
     private fun Dot.id(): Int{
-        return row * sDotCount + column
+        return row * this@PatternLockView.dotCount + column
     }
 
     private fun dotOf(row: Int, column: Int): Dot {
         checkRange(row, column)
-        return sDots[row][column]
+        return this@PatternLockView.dots[row][column]
     }
 
     private fun dotOf(id: Int): Dot {
-        val count = sDotCount
+        val count = this@PatternLockView.dotCount
         return dotOf(id / count, id % count)
     }
 
     private fun checkRange(row: Int, column: Int) {
-        val max = sDotCount - 1
+        val max = this@PatternLockView.dotCount - 1
         require(row in 0..max) {
             "mRow must be in range 0-$max"
         }
         require(column in 0..max) {
             "mColumn must be in range 0-$max"
+        }
+    }
+
+    data class Dot(
+        val row: Int,
+        val column: Int
+    )
+
+    data class DotState(
+        val scale: Float = 1.0f,
+        val translateY: Float = 0.0f,
+        val alpha: Float = 1.0f,
+        var size: Float = 0f,
+        var lineEndX: Float = Float.MIN_VALUE,
+        var lineEndY: Float = Float.MIN_VALUE,
+        var lineAnimator: ValueAnimator? = null
+    )
+
+    interface PatternLockViewListener {
+        /**
+         * Fired when the pattern drawing has just started.
+         */
+        fun onStarted()
+
+        /**
+         * Fired when the pattern is progressing (user connected a new dot).
+         */
+        fun onProgress(progressPattern: List<Dot>)
+
+        /**
+         * Fired when the user has completed drawing the pattern.
+         */
+        fun onComplete(pattern: List<Dot>)
+
+        /**
+         * Fired when the pattern has been cleared.
+         */
+        fun onCleared()
+    }
+
+    @IntDef(
+        AspectRatio.ASPECT_RATIO_SQUARE,
+        AspectRatio.ASPECT_RATIO_WIDTH_BIAS,
+        AspectRatio.ASPECT_RATIO_HEIGHT_BIAS
+    )
+    @Retention(AnnotationRetention.SOURCE)
+    annotation class AspectRatio {
+        companion object {
+            const val ASPECT_RATIO_SQUARE = 0
+            const val ASPECT_RATIO_WIDTH_BIAS = 1
+            const val ASPECT_RATIO_HEIGHT_BIAS = 2
+        }
+    }
+
+    @IntDef(PatternViewMode.CORRECT, PatternViewMode.AUTO_DRAW, PatternViewMode.WRONG)
+    @Retention(AnnotationRetention.SOURCE)
+    annotation class PatternViewMode {
+        companion object {
+            const val CORRECT = 0
+            const val AUTO_DRAW = 1
+            const val WRONG = 2
         }
     }
 
