@@ -20,8 +20,6 @@ class ClippingLottieView @JvmOverloads constructor(
     }
 
     override fun onDraw(canvas: Canvas) {
-        // Always draw the full animation
-        // The clipping will be handled by the animation progress itself
         super.onDraw(canvas)
     }
 }
