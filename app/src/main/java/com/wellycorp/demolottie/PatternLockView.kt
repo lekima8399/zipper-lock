@@ -1,4 +1,4 @@
-package com.wellycorp.demolottie.patternlock
+package com.wellycorp.demolottie
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
@@ -40,7 +40,7 @@ class PatternLockView @JvmOverloads constructor(
     private var patternSize: Int
     private var drawingProfilingStarted = false
     private var animatingPeriodStart: Long = 0
-    private var hitFactor = 0.6f
+    private var hitFactor = 0.4f
     private var aspectRatioEnabled: Boolean
     @AspectRatio
     private var aspectRatio: Int
