@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <com.wellycorp.demolottie.patternlock.PatternLockViewKt
+    <com.wellycorp.demolottie.patternlock.PatternLockView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:dotNormalSize="8dp"/>
